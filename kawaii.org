@@ -1,0 +1,115 @@
+#+TITLE: Kawaii Deployment Script
+#+AUTHOR: Kyle Montag
+#+EMAIL: thekylemontag@gmail.com
+#+options: num:nil
+* Goal
+  To make an agnostic serverless deployment script for SPAs
+
+* Script
+:PROPERTIES:
+:header-args: :shebang "#!/usr/bin/env ruby" :tangle kawaii
+:END:
+** Script setup 
+ #+BEGIN_SRC ruby
+   require 'optparse'
+   require 'fileutils'
+
+   options = {
+     deploy_command: 'yarn deploy:prod',
+     output_dir: 'dist',
+     deployment_name: 'my-kawaii-site'
+   }
+
+   DIR_NAME = Dir.home + '/.kawaii'
+
+   parser = OptionParser.new do |opts|
+     opts.banner = 'Kawaii - The Collective Frontend Deployment Tool'
+
+     opts.on('-d', '--dir application_dir', 'Application Directory') do |dir_name|
+       options[:dir_name] = dir_name
+     end
+
+     opts.on('-c', '--command deploy_command', 'Command used to build your application') do |deploy_command|
+       options[:deploy_command] = deploy_command
+     end
+
+     opts.on('-o', '--output output_dir', 'Location where your application is output') do |output_dir|
+       options[:output_dir] = output_dir
+     end
+
+     opts.on('-n', '--name deploy_name', 'What you want your deployment to be called') do |deploy_name|
+       options[:deployment_name] = deploy_name
+     end
+   end
+
+   parser.parse!
+    #+END_SRC 
+
+** Check to make sure that we were supplied a directory
+#+BEGIN_SRC ruby
+unless options[:dir_name]
+  puts "Directory not supplied"
+  return
+end
+#+END_SRC
+
+** Ensure that we have our setup files in the right place
+#+BEGIN_SRC ruby
+  unless Dir.exists?(DIR_NAME)
+    FileUtils.mkdir_p(DIR_NAME)
+    FileUtils.cp_r(Dir.glob('./setup/*'), DIR_NAME)
+  end
+#+END_SRC
+
+** Regex out our deployment names
+   this is where we will need to regex over the serverless.yml file for the placeholder values
+   and replace them with formatted versions of our supplied name
+
+** Build yaml file of known deployments and their options
+   setup a yaml file that contains the options used and the names of deployments
+   save this to a yaml file in the =~/.kawaii= folder
+
+** Remove files from the old deploy
+#+BEGIN_SRC ruby
+FileUtils.rm_rf(Dir.glob(DIR_NAME+'/app/*'))
+#+END_SRC
+
+** Copy new application files to our kawaii folder
+#+BEGIN_SRC ruby
+  def copy_application_files(output_dir)
+    FileUtils.cp_r(Dir.glob("./#{output_dir}/*"), DIR_NAME+'/app')
+  end
+#+END_SRC
+
+** Run the serverless commands in the directory
+#+BEGIN_SRC ruby
+def do_sls_deploy
+  system('serverless deploy')
+  system('serverless syncToS3') if $?.success?
+end
+#+END_SRC
+
+** Run the supplied deploy command
+#+BEGIN_SRC ruby
+def do_deploy_command(command)
+  system(command)
+  $?.success?
+end
+#+END_SRC
+** Run the build script for our application directory
+#+BEGIN_SRC ruby
+  Dir.chdir(options[:dir_name]) do
+    if do_deploy_command options[:deploy_command]
+      copy_application_files options[:output_dir]
+      Dir.chdir(DIR_NAME) do
+        do_sls_deploy
+      end
+    end
+  end
+#+END_SRC
+
+* TODO setup so that deployment names can be specified
+* TODO make a local database of deployment names to list
+  yaml file probs
+* TODO option to recall an old deployment instead of setting up a new one
+* TODO regex out the placeholder deployment name for supplied one

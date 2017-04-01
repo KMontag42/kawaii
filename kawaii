@@ -1,0 +1,68 @@
+#!/usr/bin/env ruby
+require 'optparse'
+require 'fileutils'
+
+options = {
+  deploy_command: 'yarn deploy:prod',
+  output_dir: 'dist',
+  deployment_name: 'my-kawaii-site'
+}
+
+DIR_NAME = Dir.home + '/.kawaii'
+
+parser = OptionParser.new do |opts|
+  opts.banner = 'Kawaii - The Collective Frontend Deployment Tool'
+
+  opts.on('-d', '--dir application_dir', 'Application Directory') do |dir_name|
+    options[:dir_name] = dir_name
+  end
+
+  opts.on('-c', '--command deploy_command', 'Command used to build your application') do |deploy_command|
+    options[:deploy_command] = deploy_command
+  end
+
+  opts.on('-o', '--output output_dir', 'Location where your application is output') do |output_dir|
+    options[:output_dir] = output_dir
+  end
+
+  opts.on('-n', '--name deploy_name', 'What you want your deployment to be called') do |deploy_name|
+    options[:deployment_name] = deploy_name
+  end
+end
+
+parser.parse!
+
+unless options[:dir_name]
+  puts "Directory not supplied"
+  return
+end
+
+unless Dir.exists?(DIR_NAME)
+  FileUtils.mkdir_p(DIR_NAME)
+  FileUtils.cp_r(Dir.glob('./setup/*'), DIR_NAME)
+end
+
+FileUtils.rm_rf(Dir.glob(DIR_NAME+'/app/*'))
+
+def copy_application_files(output_dir)
+  FileUtils.cp_r(Dir.glob("./#{output_dir}/*"), DIR_NAME+'/app')
+end
+
+def do_sls_deploy
+  system('serverless deploy')
+  system('serverless syncToS3') if $?.success?
+end
+
+def do_deploy_command(command)
+  system(command)
+  $?.success?
+end
+
+Dir.chdir(options[:dir_name]) do
+  if do_deploy_command options[:deploy_command]
+    copy_application_files options[:output_dir]
+    Dir.chdir(DIR_NAME) do
+      do_sls_deploy
+    end
+  end
+end
