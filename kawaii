@@ -5,7 +5,8 @@ require 'fileutils'
 options = {
   deploy_command: 'yarn deploy:prod',
   output_dir: 'dist',
-  deployment_name: 'my-kawaii-site'
+  deployment_name: 'my-kawaii-site',
+  list: false
 }
 
 DIR_NAME = Dir.home + '/.kawaii'
@@ -28,9 +29,18 @@ parser = OptionParser.new do |opts|
   opts.on('-n', '--name deploy_name', 'What you want your deployment to be called') do |deploy_name|
     options[:deployment_name] = deploy_name
   end
+
+  opts.on('-l', '--list', 'List all of the deployments already setup') do |list|
+    options[:list] = true
+  end
 end
 
 parser.parse!
+
+if options[:list]
+  puts "List stuff"
+  return
+end
 
 unless options[:dir_name]
   puts "Directory not supplied"
@@ -43,6 +53,15 @@ unless Dir.exists?(DIR_NAME)
 end
 
 FileUtils.rm_rf(Dir.glob(DIR_NAME+'/app/*'))
+
+def read_deployments_file
+  val = YAML.load(DIR_NAME + '/deployments.yaml').to_h
+  val
+end
+
+def write_deployments_file(val)
+  YAML.write(DIR_NAME + '/deployments.yaml', val.to_yml)
+end
 
 def copy_application_files(output_dir)
   FileUtils.cp_r(Dir.glob("./#{output_dir}/*"), DIR_NAME+'/app')

@@ -69,7 +69,7 @@ end
 ** Build yaml file of known deployments and their options
    setup a yaml file that contains the options used and the names of deployments
    save this to a yaml file in the =~/.kawaii= folder
-
+   
 ** Remove files from the old deploy
 #+BEGIN_SRC ruby
 FileUtils.rm_rf(Dir.glob(DIR_NAME+'/app/*'))
