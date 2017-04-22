@@ -2,6 +2,7 @@
 #+AUTHOR: Kyle Montag
 #+EMAIL: thekylemontag@gmail.com
 #+options: num:nil
+
 * Goal
   To make an agnostic serverless deployment script for SPAs
 
