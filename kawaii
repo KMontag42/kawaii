@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require 'optparse'
 require 'fileutils'
+require 'yaml'
 
 options = {
   deploy_command: 'yarn deploy:prod',
@@ -37,14 +38,43 @@ end
 
 parser.parse!
 
+def deployment_file
+  DIR_NAME + '/deployments.yaml'
+end
+
+def read_deployments_file
+  if File.exists?(deployment_file)
+    val = YAML.load(File.read(deployment_file))
+    val
+  else
+    File.write(deployment_file, [].to_yaml)
+    []
+  end
+end
+
+def write_deployments_file(val)
+  File.write(deployment_file, val.to_yaml)
+end
+
+def list_deployments
+  puts read_deployments_file
+end
+
+def add_deployment(name)
+  write_deployments_file(
+    read_deployments_file.push(name).uniq
+  )
+end
+
 if options[:list]
   puts "List stuff"
-  return
+  list_deployments
+  exit 0
 end
 
 unless options[:dir_name]
   puts "Directory not supplied"
-  return
+  exit 1
 end
 
 unless Dir.exists?(DIR_NAME)
@@ -53,15 +83,6 @@ unless Dir.exists?(DIR_NAME)
 end
 
 FileUtils.rm_rf(Dir.glob(DIR_NAME+'/app/*'))
-
-def read_deployments_file
-  val = YAML.load(DIR_NAME + '/deployments.yaml').to_h
-  val
-end
-
-def write_deployments_file(val)
-  YAML.write(DIR_NAME + '/deployments.yaml', val.to_yml)
-end
 
 def copy_application_files(output_dir)
   FileUtils.cp_r(Dir.glob("./#{output_dir}/*"), DIR_NAME+'/app')
@@ -83,5 +104,6 @@ Dir.chdir(options[:dir_name]) do
     Dir.chdir(DIR_NAME) do
       do_sls_deploy
     end
+    add_deployment(options[:deployment_name])
   end
 end

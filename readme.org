@@ -109,8 +109,5 @@ end
   end
 #+END_SRC
 
-* TODO setup so that deployment names can be specified
-* TODO make a local database of deployment names to list
-  yaml file probs
 * TODO option to recall an old deployment instead of setting up a new one
 * TODO regex out the placeholder deployment name for supplied one
